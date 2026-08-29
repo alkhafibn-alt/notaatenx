@@ -89,6 +89,7 @@
       transform-origin: top left;
       margin:0 auto;
       box-shadow:0 6px 24px rgba(20,30,70,0.18);
+      transition:none;
     }
     #preview-scale-box{
       position:relative;
@@ -249,6 +250,10 @@
     position:relative;
     overflow:hidden;
     font-size:14px;
+  }
+  #invoice.mobile-fixed-width{
+    width:794px;
+    max-width:none;
   }
   .inv-head{
     background:var(--navy);
@@ -495,7 +500,7 @@
 
     <div class="actions">
       <button class="btn btn-outline" onclick="window.print()">🖨️ Cetak</button>
-      <button class="btn btn-primary" onclick="downloadPDF()">⬇️ Unduh PDF</button>
+      <button class="btn btn-primary" id="btnDownload" onclick="downloadPDF()">⬇️ Unduh PDF</button>
     </div>
     <div class="hint">Semua perhitungan subtotal &amp; total otomatis. Klik "Unduh PDF" untuk menyimpan nota sebagai file, sama seperti contoh invoice TENX APPAREL.</div>
   </div>
@@ -699,11 +704,16 @@ function scalePreview(){
   const box = document.getElementById('preview-scale-box');
   const invoice = document.getElementById('invoice');
   if(window.innerWidth <= 720){
+    // paksa lebar asli 794px dulu (jangan biarkan CSS max-width meremas layout)
+    invoice.classList.add('mobile-fixed-width');
+    invoice.style.transform = 'none';
+    const naturalHeight = invoice.offsetHeight;
     const availableWidth = box.parentElement.clientWidth;
     const scale = Math.min(availableWidth / 794, 1);
     invoice.style.transform = `scale(${scale})`;
-    box.style.height = (invoice.offsetHeight * scale) + 'px';
+    box.style.height = (naturalHeight * scale) + 'px';
   } else {
+    invoice.classList.remove('mobile-fixed-width');
     invoice.style.transform = '';
     box.style.height = '';
   }
@@ -713,18 +723,61 @@ window.addEventListener('orientationchange', () => setTimeout(scalePreview, 200)
 
 function downloadPDF(){
   const el = document.getElementById('invoice');
-  const invNo = document.getElementById('invNo').value || "nota";
-  const custName = (document.getElementById('custName').value || "pemesan").replace(/[^a-z0-9]+/gi,'_');
-  html2canvas(el, { scale: 2, useCORS: true }).then(canvas => {
-    const imgData = canvas.toDataURL('image/png');
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = 210;
-    const imgWidth = pageWidth;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save(`Invoice_${invNo}_${custName}.pdf`);
-  });
+  const btn = document.getElementById('btnDownload');
+  const originalLabel = btn.textContent;
+  btn.textContent = "⏳ Menyiapkan PDF...";
+  btn.disabled = true;
+
+  const invNo = (document.getElementById('invNo').value || 'nota').trim();
+  const custRaw = (document.getElementById('custName').value || 'pemesan').trim();
+  const custClean = custRaw.replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'pemesan';
+  const fileName = `Invoice_${invNo}_${custClean}.pdf`;
+
+  // simpan kondisi tampilan mobile (transform kecil), lalu render dulu di ukuran ASLI 794px
+  // supaya hasil PDF selalu tajam & tidak ikut mengecil seperti tampilan HP
+  const prevTransform = el.style.transform;
+  const hadMobileClass = el.classList.contains('mobile-fixed-width');
+  el.classList.add('mobile-fixed-width');
+  el.style.transform = 'none';
+
+  // beri waktu browser reflow ke ukuran penuh sebelum discreenshot
+  setTimeout(() => {
+    html2canvas(el, { scale: 2, useCORS: true, windowWidth: 794 }).then(canvas => {
+      // kembalikan tampilan preview seperti semula
+      el.style.transform = prevTransform;
+      if(!hadMobileClass) el.classList.remove('mobile-fixed-width');
+      scalePreview();
+
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = 210;
+      const imgWidth = pageWidth;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+
+      // gunakan Blob + link download manual (lebih stabil di HP daripada pdf.save() langsung)
+      const blob = pdf.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 4000);
+
+      btn.textContent = originalLabel;
+      btn.disabled = false;
+    }).catch(() => {
+      el.style.transform = prevTransform;
+      if(!hadMobileClass) el.classList.remove('mobile-fixed-width');
+      scalePreview();
+      btn.textContent = originalLabel;
+      btn.disabled = false;
+      alert("Gagal membuat PDF, coba lagi.");
+    });
+  }, 50);
 }
 
 // wire up live listeners
