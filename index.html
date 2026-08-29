@@ -722,7 +722,6 @@ window.addEventListener('resize', scalePreview);
 window.addEventListener('orientationchange', () => setTimeout(scalePreview, 200));
 
 function downloadPDF(){
-  const el = document.getElementById('invoice');
   const btn = document.getElementById('btnDownload');
   const originalLabel = btn.textContent;
   btn.textContent = "⏳ Menyiapkan PDF...";
@@ -733,20 +732,28 @@ function downloadPDF(){
   const custClean = custRaw.replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'pemesan';
   const fileName = `Invoice_${invNo}_${custClean}.pdf`;
 
-  // simpan kondisi tampilan mobile (transform kecil), lalu render dulu di ukuran ASLI 794px
-  // supaya hasil PDF selalu tajam & tidak ikut mengecil seperti tampilan HP
-  const prevTransform = el.style.transform;
-  const hadMobileClass = el.classList.contains('mobile-fixed-width');
-  el.classList.add('mobile-fixed-width');
-  el.style.transform = 'none';
+  const original = document.getElementById('invoice');
 
-  // beri waktu browser reflow ke ukuran penuh sebelum discreenshot
+  // Buat salinan nota di luar semua kotak pembatas (overflow:hidden / transform skala HP)
+  // supaya hasil screenshot SELALU full-size 794px, persis seperti tampilan desktop,
+  // tidak peduli nota sedang ditampilkan kecil di layar HP.
+  const clone = original.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.classList.remove('mobile-fixed-width');
+  clone.style.position = 'absolute';
+  clone.style.top = '0';
+  clone.style.left = '-99999px';
+  clone.style.width = '794px';
+  clone.style.maxWidth = 'none';
+  clone.style.transform = 'none';
+  clone.style.margin = '0';
+  clone.style.boxShadow = 'none';
+  document.body.appendChild(clone);
+
+  // beri waktu browser melayout clone sebelum discreenshot
   setTimeout(() => {
-    html2canvas(el, { scale: 2, useCORS: true, windowWidth: 794 }).then(canvas => {
-      // kembalikan tampilan preview seperti semula
-      el.style.transform = prevTransform;
-      if(!hadMobileClass) el.classList.remove('mobile-fixed-width');
-      scalePreview();
+    html2canvas(clone, { scale: 2, useCORS: true, windowWidth: 794, width: 794 }).then(canvas => {
+      document.body.removeChild(clone);
 
       const imgData = canvas.toDataURL('image/png');
       const { jsPDF } = window.jspdf;
@@ -756,7 +763,7 @@ function downloadPDF(){
       const imgHeight = canvas.height * imgWidth / canvas.width;
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
 
-      // gunakan Blob + link download manual (lebih stabil di HP daripada pdf.save() langsung)
+      // Blob + link download manual: lebih stabil dibanding pdf.save() langsung di HP
       const blob = pdf.output('blob');
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -770,9 +777,7 @@ function downloadPDF(){
       btn.textContent = originalLabel;
       btn.disabled = false;
     }).catch(() => {
-      el.style.transform = prevTransform;
-      if(!hadMobileClass) el.classList.remove('mobile-fixed-width');
-      scalePreview();
+      if(document.body.contains(clone)) document.body.removeChild(clone);
       btn.textContent = originalLabel;
       btn.disabled = false;
       alert("Gagal membuat PDF, coba lagi.");
