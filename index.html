@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generator Nota - TENX APPAREL</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --navy:#152452;
+    --navy-dark:#0e1a3d;
+    --yellow:#f5c518;
+    --yellow-dark:#e0b000;
+    --ink:#1a1a1a;
+    --muted:#6b7280;
+    --paper:#ffffff;
+    --bg:#eef1f8;
+    --line:#e3e6ee;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+  }
+  .app{
+    display:grid;
+    grid-template-columns: 400px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width: 980px){
+    .app{grid-template-columns: 1fr;}
+  }
+
+  /* ---------- PANEL FORM ---------- */
+  .panel{
+    background:var(--navy-dark);
+    color:#fff;
+    padding:28px 24px 60px;
+    overflow-y:auto;
+    max-height:100vh;
+  }
+  .panel h1{
+    font-size:20px;
+    margin:0 0 4px;
+    letter-spacing:.5px;
+  }
+  .panel .sub{
+    color:#9fb0d8;
+    font-size:12.5px;
+    margin-bottom:24px;
+  }
+  .section{
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .section h2{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--yellow);
+    margin:0 0 12px;
+  }
+  label{
+    display:block;
+    font-size:12px;
+    color:#c6d0ec;
+    margin:10px 0 4px;
+  }
+  input[type=text], input[type=number], input[type=date], textarea{
+    width:100%;
+    padding:9px 10px;
+    border-radius:6px;
+    border:1px solid rgba(255,255,255,0.15);
+    background:rgba(255,255,255,0.06);
+    color:#fff;
+    font-size:13.5px;
+    outline:none;
+  }
+  input::placeholder, textarea::placeholder{color:#8492b8;}
+  input:focus, textarea:focus{border-color:var(--yellow);}
+  textarea{resize:vertical;min-height:50px;}
+
+  .item-row{
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:8px;
+    padding:10px 10px 4px;
+    margin-bottom:10px;
+    position:relative;
+    background:rgba(255,255,255,0.03);
+  }
+  .item-row .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .item-subtotal{
+    font-size:12px;
+    color:#9fb0d8;
+    margin-top:6px;
+    text-align:right;
+  }
+  .remove-item{
+    position:absolute;
+    top:8px; right:8px;
+    background:none;
+    border:none;
+    color:#ff8080;
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+  }
+  .btn{
+    display:inline-block;
+    cursor:pointer;
+    border:none;
+    border-radius:7px;
+    font-weight:600;
+    font-size:13px;
+    padding:10px 14px;
+    text-align:center;
+  }
+  .btn-add{
+    width:100%;
+    background:rgba(245,197,24,0.12);
+    color:var(--yellow);
+    border:1px dashed var(--yellow);
+    margin-top:4px;
+  }
+  .btn-add:hover{background:rgba(245,197,24,0.2);}
+  .actions{
+    position:sticky;
+    bottom:0;
+    display:flex;
+    gap:8px;
+    padding-top:10px;
+  }
+  .btn-primary{
+    flex:1;
+    background:var(--yellow);
+    color:var(--navy-dark);
+  }
+  .btn-primary:hover{background:var(--yellow-dark);}
+  .btn-outline{
+    flex:1;
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.25);
+    color:#fff;
+  }
+  .btn-outline:hover{border-color:var(--yellow);color:var(--yellow);}
+  .hint{
+    font-size:11px;
+    color:#7b89ad;
+    margin-top:14px;
+    line-height:1.5;
+  }
+  .toggle-adv{
+    font-size:12px;
+    color:#9fb0d8;
+    cursor:pointer;
+    text-decoration:underline;
+    margin-bottom:10px;
+    display:inline-block;
+  }
+
+  /* ---------- PREVIEW ---------- */
+  .preview-wrap{
+    padding:36px;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+  }
+  #invoice{
+    width:794px;
+    max-width:100%;
+    background:var(--paper);
+    box-shadow:0 10px 40px rgba(20,30,70,0.18);
+    position:relative;
+    overflow:hidden;
+    font-size:14px;
+  }
+  .inv-head{
+    background:var(--navy);
+    color:#fff;
+    padding:38px 44px 30px;
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    position:relative;
+  }
+  .inv-head::after{
+    content:"";
+    position:absolute;
+    right:0; top:0; bottom:0;
+    width:70px;
+    background:
+      linear-gradient(115deg, transparent 50%, var(--yellow) 50%);
+    opacity:0.9;
+  }
+  .inv-head-left{max-width:55%;}
+  .inv-head-left .label{
+    font-size:11px;
+    letter-spacing:.08em;
+    color:#c6d0ec;
+    text-transform:uppercase;
+  }
+  .inv-head-left .name{
+    font-size:17px;
+    font-weight:700;
+    margin-top:4px;
+    line-height:1.35;
+  }
+  .inv-head-right{text-align:right;}
+  .inv-title{
+    font-size:38px;
+    font-weight:800;
+    color:var(--yellow);
+    letter-spacing:2px;
+    margin:0 0 14px;
+  }
+  .meta-row{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    font-size:12.5px;
+    margin-bottom:3px;
+  }
+  .meta-row .k{color:#c6d0ec;min-width:95px;text-align:left;}
+  .meta-row .v{font-weight:700;}
+
+  .inv-banner{
+    background:var(--yellow);
+    color:var(--navy-dark);
+    font-weight:700;
+    font-size:13px;
+    padding:14px 44px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .inv-body{padding:26px 44px 40px;}
+  .contact-grid{
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    margin-bottom:22px;
+    font-size:12.5px;
+  }
+  .contact-grid .col b{display:inline-block;min-width:60px;color:var(--navy);}
+  .contact-grid .col-title{
+    font-size:12px;
+    font-weight:700;
+    color:var(--navy);
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .contact-grid .row{margin-bottom:3px;}
+
+  table.items{
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:18px;
+  }
+  table.items thead th{
+    background:var(--navy);
+    color:#fff;
+    text-align:left;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    padding:11px 12px;
+  }
+  table.items thead th:not(:first-child){text-align:right;}
+  table.items tbody td{
+    padding:10px 12px;
+    border-bottom:1px solid var(--line);
+    font-size:13px;
+  }
+  table.items tbody td:not(:first-child){text-align:right;}
+  table.items tbody tr td:first-child{font-weight:700;}
+
+  .bottom-grid{
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    margin-top:10px;
+  }
+  .desc-col{flex:1;font-size:12.5px;color:var(--muted);}
+  .desc-col b{color:var(--navy);display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;}
+  .totals-col{width:260px;}
+  .totals-col .trow{
+    display:flex;
+    justify-content:space-between;
+    padding:7px 0;
+    font-size:13.5px;
+    font-weight:700;
+  }
+  .totals-col .grand{
+    background:var(--navy);
+    color:#fff;
+    padding:12px 14px;
+    border-radius:2px;
+    margin-top:8px;
+    font-size:15px;
+  }
+
+  .footer-grid{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-top:34px;
+  }
+  .follow b{
+    display:block;
+    font-size:12px;
+    text-transform:uppercase;
+    color:var(--navy);
+    margin-bottom:6px;
+  }
+  .follow .row{font-size:12.5px;margin-bottom:3px;}
+  .sign{text-align:center;}
+  .sign .line{
+    border-top:1px solid var(--ink);
+    width:170px;
+    margin-bottom:6px;
+  }
+  .sign .who{font-weight:700;font-size:13px;}
+  .sign .role{font-size:11px;color:var(--muted);}
+
+  .inv-strip-bottom{
+    height:26px;
+    background:var(--yellow);
+    position:relative;
+    overflow:hidden;
+  }
+  .inv-strip-bottom::before{
+    content:"";
+    position:absolute;
+    left:40px;top:0;bottom:0;
+    width:60px;
+    background:linear-gradient(115deg, transparent 50%, var(--navy) 50%);
+    opacity:.95;
+  }
+
+  @media print{
+    body *{visibility:hidden;}
+    #invoice, #invoice *{visibility:visible;}
+    #invoice{position:absolute;top:0;left:0;box-shadow:none;width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ================= FORM PANEL ================= -->
+  <div class="panel">
+    <h1>🧾 Generator Nota</h1>
+    <div class="sub">Isi data pesanan, preview nota otomatis terupdate di sebelah kanan.</div>
+
+    <div class="section">
+      <h2>Data Pemesan</h2>
+      <label>Nama Pemesan</label>
+      <input type="text" id="custName" placeholder="Contoh: KAOS PMR KAK FIRMAN">
+
+      <label>No. Invoice</label>
+      <input type="text" id="invNo" placeholder="24827">
+
+      <div class="grid2">
+        <div>
+          <label>Tanggal Invoice</label>
+          <input type="date" id="invDate">
+        </div>
+        <div>
+          <label>Jatuh Tempo</label>
+          <input type="date" id="dueDate">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Item Pesanan</h2>
+      <div id="itemsContainer"></div>
+      <button class="btn btn-add" onclick="addItem()">+ Tambah Item</button>
+    </div>
+
+    <div class="section">
+      <h2>Pembayaran & Catatan</h2>
+      <label>Uang Muka / DP (Rp) — opsional</label>
+      <input type="number" id="dpAmount" placeholder="0" min="0">
+
+      <label>Deskripsi / Catatan Tambahan</label>
+      <textarea id="notes" placeholder="Contoh: pengerjaan 14 hari kerja setelah DP masuk"></textarea>
+    </div>
+
+    <span class="toggle-adv" onclick="toggleAdv()">⚙️ Pengaturan Toko / Rekening (klik untuk buka)</span>
+    <div class="section" id="advSection" style="display:none;">
+      <h2>Info Toko</h2>
+      <label>Nama Toko</label>
+      <input type="text" id="storeName" value="TENX APPAREL">
+      <label>Alamat</label>
+      <input type="text" id="storeAddress" value="JL.CURUG MUJAN , BULAKSARI , KEC.BANTARSARI KAB.CILACAP, JAWA TENGAH">
+      <div class="grid2">
+        <div><label>Telepon</label><input type="text" id="storePhone" value="0857-2900-8192"></div>
+        <div><label>Instagram</label><input type="text" id="storeIg" value="@tenxofficial_"></div>
+      </div>
+      <label>Email</label>
+      <input type="text" id="storeEmail" value="tenxofficial@gmail.com">
+
+      <h2 style="margin-top:16px;">Rekening</h2>
+      <div class="grid2">
+        <div><label>Rekening BRI</label><input type="text" id="rekBri" value="667301011811532"></div>
+        <div><label>Dana</label><input type="text" id="rekDana" value="085227151687"></div>
+      </div>
+      <label>Atas Nama</label>
+      <input type="text" id="rekName" value="Admi">
+
+      <h2 style="margin-top:16px;">Penanggung Jawab</h2>
+      <div class="grid2">
+        <div><label>Nama</label><input type="text" id="signName" value="GALIH"></div>
+        <div><label>Jabatan</label><input type="text" id="signRole" value="ADMINISTRATOR"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-outline" onclick="window.print()">🖨️ Cetak</button>
+      <button class="btn btn-primary" onclick="downloadPDF()">⬇️ Unduh PDF</button>
+    </div>
+    <div class="hint">Semua perhitungan subtotal &amp; total otomatis. Klik "Unduh PDF" untuk menyimpan nota sebagai file, sama seperti contoh invoice TENX APPAREL.</div>
+  </div>
+
+  <!-- ================= PREVIEW ================= -->
+  <div class="preview-wrap">
+    <div id="invoice">
+      <div class="inv-head">
+        <div class="inv-head-left">
+          <div class="label">Invoice To:</div>
+          <div class="name" id="pv-custName">KAOS PMR KAK FIRMAN</div>
+        </div>
+        <div class="inv-head-right">
+          <div class="inv-title">INVOICE</div>
+          <div class="meta-row"><span class="k">Invoice No:</span><span class="v" id="pv-invNo">#24826</span></div>
+          <div class="meta-row"><span class="k">Due Date:</span><span class="v" id="pv-dueDate">24 AGUSTUS 2026</span></div>
+          <div class="meta-row"><span class="k">Invoice Date:</span><span class="v" id="pv-invDate">30 AGUSTUS 2026</span></div>
+        </div>
+      </div>
+
+      <div class="inv-banner">
+        <span>📍</span><span id="pv-storeAddress">JL.CURUG MUJAN , BULAKSARI , KEC.BANTARSARI KAB.CILACAP, JAWA TENGAH</span>
+      </div>
+
+      <div class="inv-body">
+        <div class="contact-grid">
+          <div class="col">
+            <div class="row"><b>Phone:</b> <span id="pv-storePhone">0857-2900-8192</span></div>
+            <div class="row"><b>Email:</b> <span id="pv-storeEmail">tenxofficial@gmail.com</span></div>
+            <div class="row"><b>Address:</b> <span id="pv-storeShort">Cilacap, Jawa tengah</span></div>
+          </div>
+          <div class="col" style="text-align:right;">
+            <div class="col-title">Payment Method</div>
+            <div class="row"><b>Rekening BRI</b> &nbsp; <span id="pv-rekBri">667301011811532</span></div>
+            <div class="row"><b>Dana</b> &nbsp; <span id="pv-rekDana">085227151687</span></div>
+            <div class="row"><b>Atas nama</b> &nbsp; <span id="pv-rekName">Admi</span></div>
+          </div>
+        </div>
+
+        <table class="items">
+          <thead>
+            <tr><th>Description</th><th>Harga Satuan</th><th>Qty</th><th>Subtotal</th></tr>
+          </thead>
+          <tbody id="pv-itemsBody">
+          </tbody>
+        </table>
+
+        <div class="bottom-grid">
+          <div class="desc-col">
+            <b>Deskripsi</b>
+            <div id="pv-notes">—</div>
+          </div>
+          <div class="totals-col">
+            <div class="trow"><span>Sub-total:</span><span id="pv-subtotal">Rp 0</span></div>
+            <div class="trow" id="pv-dpRow" style="display:none;"><span>Bisa DP</span><span id="pv-dp">Rp 0</span></div>
+            <div class="trow grand"><span>TOTAL</span><span id="pv-total">Rp 0</span></div>
+          </div>
+        </div>
+
+        <div class="footer-grid">
+          <div class="follow">
+            <b>Follow Us</b>
+            <div class="row">📞 <span id="pv-storePhone2">0857-2900-8192</span></div>
+            <div class="row">📷 <span id="pv-storeIg">@tenxofficial_</span></div>
+            <div class="row">🎵 <span id="pv-storeIg2">@tenxofficial_</span></div>
+          </div>
+          <div class="sign">
+            <div class="line"></div>
+            <div class="who" id="pv-signName">GALIH</div>
+            <div class="role" id="pv-signRole">ADMINISTRATOR</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-strip-bottom"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let items = [
+  { desc:"LENGAN PANJANG", price:75000, qty:27 }
+];
+
+function toggleAdv(){
+  const el = document.getElementById('advSection');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function formatRupiah(n){
+  n = Math.round(Number(n)||0);
+  return "Rp " + n.toLocaleString('id-ID');
+}
+
+function formatDateID(dateStr){
+  if(!dateStr) return "-";
+  const bulan = ["JANUARI","FEBRUARI","MARET","APRIL","MEI","JUNI","JULI","AGUSTUS","SEPTEMBER","OKTOBER","NOVEMBER","DESEMBER"];
+  const d = new Date(dateStr + "T00:00:00");
+  if(isNaN(d)) return dateStr;
+  return d.getDate() + " " + bulan[d.getMonth()] + " " + d.getFullYear();
+}
+
+function renderItemsForm(){
+  const c = document.getElementById('itemsContainer');
+  c.innerHTML = "";
+  items.forEach((it, idx) => {
+    const row = document.createElement('div');
+    row.className = "item-row";
+    row.innerHTML = `
+      ${items.length > 1 ? `<button class="remove-item" onclick="removeItem(${idx})">✕</button>` : ""}
+      <label>Kategori / Deskripsi Barang</label>
+      <input type="text" value="${it.desc}" placeholder="Contoh: KAOS LENGAN PANJANG" onchange="updateItem(${idx},'desc',this.value)">
+      <div class="grid2">
+        <div>
+          <label>Harga Satuan (Rp)</label>
+          <input type="number" min="0" value="${it.price}" onchange="updateItem(${idx},'price',this.value)">
+        </div>
+        <div>
+          <label>Jumlah (Qty)</label>
+          <input type="number" min="0" value="${it.qty}" onchange="updateItem(${idx},'qty',this.value)">
+        </div>
+      </div>
+      <div class="item-subtotal">Subtotal: ${formatRupiah((Number(it.price)||0)*(Number(it.qty)||0))}</div>
+    `;
+    c.appendChild(row);
+  });
+}
+
+function addItem(){
+  items.push({ desc:"", price:0, qty:1 });
+  renderItemsForm();
+  render();
+}
+
+function removeItem(idx){
+  items.splice(idx,1);
+  renderItemsForm();
+  render();
+}
+
+function updateItem(idx, field, value){
+  items[idx][field] = (field === 'desc') ? value : Number(value);
+  renderItemsForm();
+  render();
+}
+
+function render(){
+  document.getElementById('pv-custName').textContent = document.getElementById('custName').value || "NAMA PEMESAN";
+  document.getElementById('pv-invNo').textContent = "#" + (document.getElementById('invNo').value || "-");
+  document.getElementById('pv-dueDate').textContent = formatDateID(document.getElementById('dueDate').value);
+  document.getElementById('pv-invDate').textContent = formatDateID(document.getElementById('invDate').value);
+
+  const storeAddress = document.getElementById('storeAddress').value;
+  document.getElementById('pv-storeAddress').textContent = storeAddress;
+  document.getElementById('pv-storePhone').textContent = document.getElementById('storePhone').value;
+  document.getElementById('pv-storePhone2').textContent = document.getElementById('storePhone').value;
+  document.getElementById('pv-storeEmail').textContent = document.getElementById('storeEmail').value;
+  document.getElementById('pv-storeIg').textContent = document.getElementById('storeIg').value;
+  document.getElementById('pv-storeIg2').textContent = document.getElementById('storeIg').value;
+  document.getElementById('pv-rekBri').textContent = document.getElementById('rekBri').value;
+  document.getElementById('pv-rekDana').textContent = document.getElementById('rekDana').value;
+  document.getElementById('pv-rekName').textContent = document.getElementById('rekName').value;
+  document.getElementById('pv-signName').textContent = document.getElementById('signName').value;
+  document.getElementById('pv-signRole').textContent = document.getElementById('signRole').value;
+  document.getElementById('pv-notes').textContent = document.getElementById('notes').value || "—";
+
+  // short address: take part after last comma segment (city, province) if possible
+  const parts = storeAddress.split(',');
+  document.getElementById('pv-storeShort').textContent = parts.length > 1 ? parts.slice(-2).join(',').trim() : storeAddress;
+
+  const body = document.getElementById('pv-itemsBody');
+  body.innerHTML = "";
+  let subtotal = 0;
+  items.forEach(it => {
+    const price = Number(it.price)||0;
+    const qty = Number(it.qty)||0;
+    const rowTotal = price*qty;
+    subtotal += rowTotal;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${it.desc || "-"}</td><td>${formatRupiah(price)}</td><td>${qty}</td><td>${formatRupiah(rowTotal)}</td>`;
+    body.appendChild(tr);
+  });
+
+  const dp = Number(document.getElementById('dpAmount').value)||0;
+  document.getElementById('pv-subtotal').textContent = formatRupiah(subtotal);
+  document.getElementById('pv-total').textContent = formatRupiah(subtotal);
+  const dpRow = document.getElementById('pv-dpRow');
+  if(dp > 0){
+    dpRow.style.display = "flex";
+    document.getElementById('pv-dp').textContent = formatRupiah(dp);
+  } else {
+    dpRow.style.display = "none";
+  }
+}
+
+function downloadPDF(){
+  const el = document.getElementById('invoice');
+  const invNo = document.getElementById('invNo').value || "nota";
+  const custName = (document.getElementById('custName').value || "pemesan").replace(/[^a-z0-9]+/gi,'_');
+  html2canvas(el, { scale: 2, useCORS: true }).then(canvas => {
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = 210;
+    const imgWidth = pageWidth;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    pdf.save(`Invoice_${invNo}_${custName}.pdf`);
+  });
+}
+
+// wire up live listeners
+document.querySelectorAll('.panel input, .panel textarea').forEach(el => {
+  el.addEventListener('input', render);
+});
+
+// defaults
+document.getElementById('invNo').value = "24827";
+document.getElementById('invDate').value = new Date().toISOString().slice(0,10);
+const due = new Date(); due.setDate(due.getDate()+14);
+document.getElementById('dueDate').value = due.toISOString().slice(0,10);
+document.getElementById('custName').value = "";
+
+renderItemsForm();
+render();
+</script>
+</body>
+</html>
